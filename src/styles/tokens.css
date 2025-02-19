@@ -1,0 +1,81 @@
+:root {
+  /* Spacing System (px) */
+  --space-1: 8px;      /* 8px */
+  --space-2: 10px;     /* 8px * 1.25 */
+  --space-3: 12.5px;   /* 10px * 1.25 */
+  --space-4: 16px;     /* 12.5px * 1.25 */
+  --space-5: 20px;     /* 16px * 1.25 */
+  --space-6: 25px;     /* 20px * 1.25 */
+  --space-7: 31.25px;  /* 25px * 1.25 */
+  --space-8: 39px;     /* 31.25px * 1.25 */
+  --space-9: 49px;     /* 39px * 1.25 */
+  --space-10: 61px;    /* 49px * 1.25 */
+
+  /* Spacing System (rem) */
+  --space-1-rem: 0.5rem;   /* 8px */
+  --space-2-rem: 0.625rem; /* 10px */
+  --space-3-rem: 0.781rem; /* 12.5px */
+  --space-4-rem: 1rem;     /* 16px */
+  --space-5-rem: 1.25rem;  /* 20px */
+  --space-6-rem: 1.563rem; /* 25px */
+  --space-7-rem: 1.953rem; /* 31.25px */
+  --space-8-rem: 2.441rem; /* 39px */
+  --space-9-rem: 3.052rem; /* 49px */
+  --space-10-rem: 3.815rem;/* 61px */
+
+  /* Border Radius */
+  --radius-sm: 0.25rem;    /* 4px */
+  --radius-md: 0.5rem;     /* 8px */
+  --radius-lg: 1rem;       /* 16px */
+  --radius-xl: 1.5rem;     /* 24px */
+  --radius-2xl: 2rem;      /* 32px */
+
+  /* Breakpoints */
+  --mobile: 640px;
+  --tablet: 768px;
+  --laptop: 1024px;
+  --desktop: 1280px;
+  --wide: 1536px;
+}
+
+.main-gradient {
+  background: linear-gradient(to right, #0051ff, #7100fc);
+}
+
+.main-gradient-text {
+  background: linear-gradient(to right, #0051ff, #7100fc);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.main-gradient-hover:hover {
+  background: linear-gradient(to right, #0051ff, #7100fc);
+}
+
+.main-gradient-text-hover:hover {
+  background: linear-gradient(to right, #0051ff, #7100fc);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.gradient-text {
+  background: linear-gradient(to right, #0051ff, #7100fc);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Form focus styles */
+.form-input:focus {
+  outline: none;
+  border-color: transparent;
+  box-shadow: 0 0 0 1px transparent, 0 0 0 2px transparent;
+  background: linear-gradient(to right, #0051ff, #7100fc) border-box;
+  border: 1px solid transparent;
+  border-radius: 0.375rem;
+  -webkit-mask: 
+     linear-gradient(#fff 0 0) padding-box, 
+     linear-gradient(#fff 0 0);
+  -webkit-mask-composite: destination-out;
+  mask-composite: exclude;
+}

@@ -1,101 +1,95 @@
-import Image from "next/image";
+'use client';
+
+import { useState } from 'react';
+import { Search } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { CategoriesSidebar } from '@/components/categories/categories-sidebar';
+import { PromptCard } from '@/components/prompts/prompt-card';
+import { useSession } from 'next-auth/react';
+import { usePrompts } from '@/hooks/use-prompts';
+import { useTheme } from '@/lib/theme';
+import { PromptCardSkeleton } from '@/components/prompts/prompt-card-skeleton';
+import { SearchFilterBar } from '@/components/prompts/search/search-filter-bar';
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const [currentPage, setCurrentPage] = useState(1);
+  const { data: session } = useSession();
+  const { prompts, pagination, isLoading, error, mutate } = usePrompts(currentPage);
+  const { language } = useTheme();
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  const handleLoadMore = () => {
+    setCurrentPage((prev) => prev + 1);
+  };
+
+  const handleCopyPrompt = async (promptId: string) => {
+    try {
+      const prompt = prompts.find(p => p.id === promptId);
+      if (prompt) {
+        await navigator.clipboard.writeText(prompt.instructions[language]);
+        // TODO: Increment usage count via API
+      }
+    } catch (err) {
+      console.error('Failed to copy prompt:', err);
+    }
+  };
+
+  return (
+    <div className="flex min-h-screen bg-black_main">
+      {/* Sidebar */}
+      <CategoriesSidebar />
+
+      {/* Main Content */}
+      <main className="flex-1 ml-72 min-h-screen pb-[var(--space-8)]">
+        {/* Banner Section */}
+        <section className="relative mt-16 px-6" style={{ paddingTop: '24px !important' }}>
+          <div className="relative h-[300px] md:h-[350px] lg:h-[400px] overflow-hidden rounded-2xl">
+            <div className="absolute inset-0 w-full h-full transform translate-y-0 transition-transform duration-[8000ms] hover:translate-y-[-10%]">
+              <img
+                src="/banner_01.png"
+                alt="Banner landscape"
+                className="w-full h-[120%] object-cover"
+              />
+            </div>
+            <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-black/30 flex flex-col justify-center px-8">
+              <h1 
+                className="text-4xl md:text-5xl lg:text-6xl font-bold text-white opacity-0 animate-[slideUp_1s_ease-in-out_forwards]"
+                style={{ animationDelay: '0.3s' }}
+              >
+                Discover AI Prompts
+              </h1>
+              <p 
+                className="mt-4 text-lg md:text-xl text-gray-200 max-w-2xl opacity-0 animate-[slideUp_1s_ease-in-out_forwards]"
+                style={{ animationDelay: '0.6s' }}
+              >
+                Explore and share powerful prompts that unlock the full potential of AI. Find the perfect prompt for your next project.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* Search and Filters */}
+        <SearchFilterBar />
+
+        {/* Prompts Grid */}
+        <div className="px-6 mt-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {isLoading ? (
+              Array.from({ length: 6 }).map((_, index) => (
+                <PromptCardSkeleton key={index} />
+              ))
+            ) : (
+              prompts.map((prompt) => (
+                <PromptCard
+                  key={prompt.id}
+                  prompt={prompt}
+                  onCopy={() => handleCopyPrompt(prompt.id)}
+                />
+              ))
+            )}
+          </div>
         </div>
       </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
     </div>
   );
 }

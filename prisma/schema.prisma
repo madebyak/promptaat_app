@@ -1,0 +1,186 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Category {
+  id               Int              @id @default(autoincrement())
+  nameEn           String           @map("name_en")
+  nameAr           String           @map("name_ar")
+  slug             String           @unique
+  parentCategoryId Int?             @map("parent_category_id")
+  description      String?
+  order            Int              @default(0)
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+  parentCategory   Category?        @relation("CategoryHierarchy", fields: [parentCategoryId], references: [id])
+  subcategories    Category[]       @relation("CategoryHierarchy")
+  prompts          PromptCategory[]
+
+  @@map("categories")
+}
+
+model Tool {
+  id        Int          @id @default(autoincrement())
+  nameEn    String       @map("name_en")
+  iconUrl   String       @map("icon_url")
+  createdAt DateTime     @default(now()) @map("created_at")
+  updatedAt DateTime     @updatedAt @map("updated_at")
+  prompts   PromptTool[]
+
+  @@map("tools")
+}
+
+model Prompt {
+  id             Int              @id @default(autoincrement())
+  titleEn        String           @map("title_en")
+  titleAr        String           @map("title_ar")
+  type           PromptType
+  descriptionEn  String           @map("description_en")
+  descriptionAr  String           @map("description_ar")
+  instructionsEn String           @map("instructions_en")
+  instructionsAr String           @map("instructions_ar")
+  usesCounter    Int              @default(0) @map("uses_counter")
+  createdAt      DateTime         @default(now()) @map("created_at")
+  updatedAt      DateTime         @updatedAt @map("updated_at")
+  categories     PromptCategory[]
+  tools          PromptTool[]
+  userCatalogs   SavedPrompt[]
+
+  @@map("prompts")
+}
+
+model User {
+  id                       Int                  @id @default(autoincrement())
+  firstName               String               @map("first_name")
+  lastName                String               @map("last_name")
+  email                   String               @unique
+  password                String
+  country                 String?
+  emailVerified          Boolean              @default(false) @map("email_verified")
+  verificationCode        String?             @map("verification_code")
+  verificationCodeExpires DateTime?           @map("verification_code_expires")
+  emailVerificationAttempts Int               @default(0) @map("email_verification_attempts")
+  lastEmailSentAt         DateTime?           @map("last_email_sent_at")
+  createdAt              DateTime             @default(now()) @map("created_at")
+  updatedAt              DateTime             @updatedAt @map("updated_at")
+  resetTokens            PasswordResetToken[]
+  memberships            ProMembership[]
+  catalogs               UserCatalog[]
+  emailLogs             EmailLog[]
+
+  @@index([email, emailVerified], name: "users_email_verified_idx")
+  @@map("users")
+}
+
+model ProMembership {
+  id        Int       @id @default(autoincrement())
+  userId    Int       @map("user_id")
+  planName  PlanType  @map("plan_name")
+  status    SubStatus
+  startDate DateTime  @map("start_date")
+  endDate   DateTime  @map("end_date")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  user      User      @relation(fields: [userId], references: [id])
+
+  @@map("pro_memberships")
+}
+
+model AdminUser {
+  id        Int      @id @default(autoincrement())
+  username  String   @unique
+  password  String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("admin_users")
+}
+
+model UserCatalog {
+  id        Int           @id @default(autoincrement())
+  userId    Int           @map("user_id")
+  name      String
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime      @updatedAt @map("updated_at")
+  prompts   SavedPrompt[]
+  user      User          @relation(fields: [userId], references: [id])
+
+  @@map("user_catalogs")
+}
+
+model PasswordResetToken {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@map("password_reset_tokens")
+}
+
+model PromptCategory {
+  promptId   Int      @map("prompt_id")
+  categoryId Int      @map("category_id")
+  category   Category @relation(fields: [categoryId], references: [id])
+  prompt     Prompt   @relation(fields: [promptId], references: [id])
+
+  @@id([promptId, categoryId])
+  @@map("prompt_categories")
+}
+
+model PromptTool {
+  promptId Int    @map("prompt_id")
+  toolId   Int    @map("tool_id")
+  prompt   Prompt @relation(fields: [promptId], references: [id])
+  tool     Tool   @relation(fields: [toolId], references: [id])
+
+  @@id([promptId, toolId])
+  @@map("prompt_tools")
+}
+
+model SavedPrompt {
+  catalogId Int         @map("user_catalog_id")
+  promptId  Int         @map("prompt_id")
+  createdAt DateTime    @default(now()) @map("created_at")
+  prompt    Prompt      @relation(fields: [promptId], references: [id])
+  catalog   UserCatalog @relation(fields: [catalogId], references: [id])
+
+  @@id([catalogId, promptId])
+  @@map("saved_prompts")
+}
+
+model EmailLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  type      String   // e.g., 'verification', 'reset_password', etc.
+  recipient String
+  status    String   // e.g., 'sent', 'failed'
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([userId, createdAt])
+  @@index([type, createdAt])
+  @@map("email_logs")
+}
+
+enum PromptType {
+  Free
+  Pro
+}
+
+enum PlanType {
+  one_month     @map("1_month")
+  three_months  @map("3_months")
+  twelve_months @map("12_months")
+}
+
+enum SubStatus {
+  active
+  expired
+}
