@@ -10,18 +10,39 @@
   --space-8: 39px;     /* 31.25px * 1.25 */
   --space-9: 49px;     /* 39px * 1.25 */
   --space-10: 61px;    /* 49px * 1.25 */
+  --space-11: 76.25px; /* 61px * 1.25 */
+  --space-12: 95.31px; /* 76.25px * 1.25 */
+  --space-13: 119.14px;/* 95.31px * 1.25 */
 
   /* Spacing System (rem) */
-  --space-1-rem: 0.5rem;   /* 8px */
-  --space-2-rem: 0.625rem; /* 10px */
-  --space-3-rem: 0.781rem; /* 12.5px */
-  --space-4-rem: 1rem;     /* 16px */
-  --space-5-rem: 1.25rem;  /* 20px */
-  --space-6-rem: 1.563rem; /* 25px */
-  --space-7-rem: 1.953rem; /* 31.25px */
-  --space-8-rem: 2.441rem; /* 39px */
-  --space-9-rem: 3.052rem; /* 49px */
-  --space-10-rem: 3.815rem;/* 61px */
+  --space-1-rem: 0.5rem;    /* 8px */
+  --space-2-rem: 0.625rem;  /* 10px */
+  --space-3-rem: 0.781rem;  /* 12.5px */
+  --space-4-rem: 1rem;      /* 16px */
+  --space-5-rem: 1.25rem;   /* 20px */
+  --space-6-rem: 1.563rem;  /* 25px */
+  --space-7-rem: 1.953rem;  /* 31.25px */
+  --space-8-rem: 2.441rem;  /* 39px */
+  --space-9-rem: 3.052rem;  /* 49px */
+  --space-10-rem: 3.815rem; /* 61px */
+  --space-11-rem: 4.768rem; /* 76.25px */
+  --space-12-rem: 5.96rem;  /* 95.31px */
+  --space-13-rem: 7.45rem;  /* 119.14px */
+
+  /* Typography Scale (rem) */
+  --text-xs: 0.75rem;      /* 12px */
+  --text-sm: 0.875rem;     /* 14px */
+  --text-base: 1rem;       /* 16px */
+  --text-lg: 1.125rem;     /* 18px */
+  --text-xl: 1.25rem;      /* 20px */
+  --text-2xl: 1.5rem;      /* 24px */
+  --text-3xl: 1.875rem;    /* 30px */
+  --text-4xl: 2.25rem;     /* 36px */
+  --text-5xl: 3rem;        /* 48px */
+  --text-6xl: 3.75rem;     /* 60px */
+  --text-7xl: 4.5rem;      /* 72px */
+  --text-8xl: 6rem;        /* 96px */
+  --text-9xl: 8rem;        /* 128px */
 
   /* Border Radius */
   --radius-sm: 0.25rem;    /* 4px */
@@ -29,6 +50,8 @@
   --radius-lg: 1rem;       /* 16px */
   --radius-xl: 1.5rem;     /* 24px */
   --radius-2xl: 2rem;      /* 32px */
+  --radius-3xl: 3rem;      /* 48px */
+  --radius-full: 9999px;
 
   /* Breakpoints */
   --mobile: 640px;

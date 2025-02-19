@@ -40,10 +40,10 @@ export default function Home() {
       <CategoriesSidebar />
 
       {/* Main Content */}
-      <main className="flex-1 ml-72 min-h-screen pb-[var(--space-8)]">
+      <main className="flex-1 ml-72 min-h-screen pb-[var(--space-8-rem)]">
         {/* Banner Section */}
-        <section className="relative mt-16 px-6" style={{ paddingTop: '24px !important' }}>
-          <div className="relative h-[300px] md:h-[350px] lg:h-[400px] overflow-hidden rounded-2xl">
+        <section className="relative mx-[var(--space-6-rem)] mt-[var(--space-6-rem)]">
+          <div className="relative h-[300px] md:h-[350px] lg:h-[400px] overflow-hidden rounded-[var(--radius-2xl)]">
             <div className="absolute inset-0 w-full h-full transform translate-y-0 transition-transform duration-[8000ms] hover:translate-y-[-10%]">
               <img
                 src="/banner_01.png"

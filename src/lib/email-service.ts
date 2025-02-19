@@ -9,7 +9,7 @@ import {
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-const FROM_EMAIL = 'noreply@promptaat.com';
+const FROM_EMAIL = 'onboarding@resend.dev'; // Using Resend's default sending domain for testing
 const MAX_EMAILS_PER_DAY = 5; // Per user
 
 interface EmailOptions {
@@ -53,11 +53,16 @@ async function checkEmailLimit(userId: number): Promise<boolean> {
 async function sendEmail(options: EmailOptions, userId: number, type: string) {
   try {
     if (process.env.NODE_ENV === 'development') {
-      console.log('Development mode - Email would be sent:', {
-        from: FROM_EMAIL,
-        ...options,
-      });
-      await logEmail(userId, type, options.to, 'sent');
+      console.log('\n📧 Development Mode - Email Details:');
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log('To:', options.to);
+      console.log('Subject:', options.subject);
+      console.log('Type:', type);
+      console.log('HTML Content:', options.html);
+      console.log('Text Content:', options.text);
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+      
+      await logEmail(userId, type, options.to, 'development_logged');
       return true;
     }
 
@@ -67,10 +72,21 @@ async function sendEmail(options: EmailOptions, userId: number, type: string) {
     });
 
     if (response.error) {
-      console.error('Failed to send email:', response.error);
+      console.error('Failed to send email:', {
+        error: response.error,
+        to: options.to,
+        subject: options.subject,
+        type,
+      });
       await logEmail(userId, type, options.to, 'failed');
       return false;
     }
+
+    console.log('Email sent successfully:', {
+      to: options.to,
+      subject: options.subject,
+      type,
+    });
 
     await logEmail(userId, type, options.to, 'sent');
     return true;

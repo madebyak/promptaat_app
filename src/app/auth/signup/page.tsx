@@ -163,28 +163,35 @@ export default function SignupPage() {
   const customSelectStyles = {
     control: (base: any) => ({
       ...base,
-      backgroundColor: '#171717', 
+      backgroundColor: '#171717',
       borderColor: 'transparent',
       '&:hover': {
-        borderColor: '#282828', 
+        borderColor: '#282828',
       },
       boxShadow: 'none',
     }),
     menu: (base: any) => ({
       ...base,
-      backgroundColor: '#171717', 
-      border: '1px solid #282828', 
+      backgroundColor: '#171717',
+      border: '1px solid #282828',
+      position: 'absolute',
+      width: '100%',
+      zIndex: 50,
+    }),
+    menuList: (base: any) => ({
+      ...base,
+      maxHeight: '200px',
     }),
     option: (base: any, state: { isSelected: boolean; isFocused: boolean }) => ({
       ...base,
       backgroundColor: state.isSelected
-        ? 'linear-gradient(to right, #0051ff, #7100fc)' 
+        ? 'linear-gradient(to right, #0051ff, #7100fc)'
         : state.isFocused
-        ? '#282828' 
+        ? '#282828'
         : undefined,
       color: 'white',
       '&:active': {
-        background: 'linear-gradient(to right, #0051ff, #7100fc)', 
+        background: 'linear-gradient(to right, #0051ff, #7100fc)',
       },
     }),
     singleValue: (base: any) => ({
@@ -320,29 +327,21 @@ export default function SignupPage() {
                 control={form.control}
                 name="country"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-white">Country</FormLabel>
-                    <FormControl>
-                      <Select
-                        value={field.value}
-                        onChange={field.onChange}
-                        onBlur={field.onBlur}
-                        options={countries}
-                        placeholder="Select your country"
-                        className="text-white"
-                        classNames={{
-                          control: () => "!bg-dark_grey !border-[#1F1F1F] !text-white h-12",
-                          menu: () => "!bg-dark_grey !border !border-[#1F1F1F]",
-                          option: (state) => 
-                            state.isFocused 
-                              ? "!bg-[#1F1F1F] !text-white"
-                              : "!bg-dark_grey !text-white hover:!bg-[#1F1F1F]",
-                          singleValue: () => "!text-white",
-                          input: () => "!text-white",
-                          placeholder: () => "!text-light_grey",
-                        }}
-                      />
-                    </FormControl>
+                  <FormItem className="relative mb-6">
+                    <FormLabel>Country</FormLabel>
+                    <Select
+                      {...field}
+                      options={countries}
+                      styles={customSelectStyles}
+                      placeholder="Select your country"
+                      isSearchable={true}
+                      filterOption={(option, input) => {
+                        if (!input) return true;
+                        const searchLabel = (option.data as any).searchLabel.toLowerCase();
+                        return searchLabel.includes(input.toLowerCase());
+                      }}
+                      className="z-50"
+                    />
                     <FormMessage />
                   </FormItem>
                 )}
