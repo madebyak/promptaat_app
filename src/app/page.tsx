@@ -35,31 +35,31 @@ export default function Home() {
   };
 
   return (
-    <div className="flex min-h-screen bg-black_main">
-      {/* Sidebar */}
+    <div className="flex flex-col lg:flex-row min-h-screen bg-black_main">
+      {/* Sidebar - Hidden on mobile, shown on large screens */}
       <CategoriesSidebar />
 
       {/* Main Content */}
-      <main className="flex-1 ml-72 min-h-screen pb-[var(--space-8-rem)]">
+      <main className="flex-1 w-full lg:ml-72 min-h-screen pb-[var(--space-8-rem)]">
         {/* Banner Section */}
-        <section className="relative mx-[var(--space-6-rem)] mt-[var(--space-6-rem)]">
-          <div className="relative h-[300px] md:h-[350px] lg:h-[400px] overflow-hidden rounded-[var(--radius-2xl)]">
+        <section className="relative mx-[var(--space-2-rem)] lg:mx-[var(--space-6-rem)] mt-[var(--space-2-rem)] lg:mt-[var(--space-6-rem)]">
+          <div className="relative h-[250px] sm:h-[300px] md:h-[350px] lg:h-[400px] overflow-hidden rounded-[var(--radius-2xl)]">
             <div className="absolute inset-0 w-full h-full transform translate-y-0 transition-transform duration-[8000ms] hover:translate-y-[-10%]">
               <img
-                src="/banner_01.png"
+                src="/Banner_img_01.png"
                 alt="Banner landscape"
                 className="w-full h-[120%] object-cover"
               />
             </div>
-            <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-black/30 flex flex-col justify-center px-8">
+            <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-black/30 flex flex-col justify-center px-4 sm:px-8">
               <h1 
-                className="text-4xl md:text-5xl lg:text-6xl font-bold text-white opacity-0 animate-[slideUp_1s_ease-in-out_forwards]"
+                className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white opacity-0 animate-[slideUp_1s_ease-in-out_forwards]"
                 style={{ animationDelay: '0.3s' }}
               >
                 Discover AI Prompts
               </h1>
               <p 
-                className="mt-4 text-lg md:text-xl text-gray-200 max-w-2xl opacity-0 animate-[slideUp_1s_ease-in-out_forwards]"
+                className="mt-4 text-base sm:text-lg md:text-xl text-gray-200 max-w-2xl opacity-0 animate-[slideUp_1s_ease-in-out_forwards]"
                 style={{ animationDelay: '0.6s' }}
               >
                 Explore and share powerful prompts that unlock the full potential of AI. Find the perfect prompt for your next project.
@@ -72,8 +72,8 @@ export default function Home() {
         <SearchFilterBar />
 
         {/* Prompts Grid */}
-        <div className="px-6 mt-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="px-4 sm:px-6 mt-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {isLoading ? (
               Array.from({ length: 6 }).map((_, index) => (
                 <PromptCardSkeleton key={index} />
