@@ -9,8 +9,12 @@ import {
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-const FROM_EMAIL = 'onboarding@resend.dev'; // Using Resend's default sending domain for testing
-const MAX_EMAILS_PER_DAY = 5; // Per user
+const FROM_EMAIL = 'no-reply@verify.promptaat.com';
+const SUPPORT_EMAIL = 'support@promptaat.com';
+const WEBSITE_URL = 'www.promptaat.com';
+const MAX_EMAILS_PER_DAY = 5;
+const MAX_PASSWORD_RESET_PER_DAY = 3;
+const PASSWORD_RESET_EXPIRY = 2 * 60 * 60; // 2 hours in seconds
 
 interface EmailOptions {
   to: string;

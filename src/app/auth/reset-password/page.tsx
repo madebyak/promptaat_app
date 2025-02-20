@@ -1,8 +1,7 @@
 'use client';
 
-import Image from 'next/image';
-import Link from 'next/link';
 import { useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
@@ -15,33 +14,52 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
+import { PasswordInput } from '@/components/ui/password-input';
 import { motion } from 'framer-motion';
-import { ArrowLeft } from 'lucide-react';
-import { ReCAPTCHA } from '@/components/recaptcha';
 import { useToast } from '@/components/ui/use-toast';
+import { ReCAPTCHA } from '@/components/recaptcha';
 
-const forgotPasswordSchema = z.object({
-  email: z.string().email('Invalid email address'),
-  recaptchaToken: z.string().optional(),
-});
+const resetPasswordSchema = z
+  .object({
+    password: z.string().min(8, 'Password must be at least 8 characters'),
+    confirmPassword: z.string(),
+    recaptchaToken: z.string().optional(),
+  })
+  .refine(data => data.password === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ['confirmPassword'],
+  });
 
-type ForgotPasswordFormValues = z.infer<typeof forgotPasswordSchema>;
+type ResetPasswordFormValues = z.infer<typeof resetPasswordSchema>;
 
-export default function ForgotPasswordPage() {
+export default function ResetPasswordPage() {
   const [isLoading, setIsLoading] = useState(false);
-  const [isEmailSent, setIsEmailSent] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
   const [recaptchaToken, setRecaptchaToken] = useState<string>();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
 
-  const form = useForm<ForgotPasswordFormValues>({
-    resolver: zodResolver(forgotPasswordSchema),
+  const token = searchParams.get('token');
+
+  const form = useForm<ResetPasswordFormValues>({
+    resolver: zodResolver(resetPasswordSchema),
     defaultValues: {
-      email: '',
+      password: '',
+      confirmPassword: '',
     },
   });
 
-  const onSubmit = async (data: ForgotPasswordFormValues) => {
+  const onSubmit = async (data: ResetPasswordFormValues) => {
+    if (!token) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Invalid reset token',
+      });
+      return;
+    }
+
     if (!recaptchaToken) {
       toast({
         variant: 'destructive',
@@ -53,13 +71,14 @@ export default function ForgotPasswordPage() {
 
     setIsLoading(true);
     try {
-      const response = await fetch('/api/auth/forgot-password', {
+      const response = await fetch('/api/auth/reset-password', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          email: data.email.toLowerCase(),
+          token,
+          password: data.password,
           recaptchaToken,
         }),
       });
@@ -67,24 +86,47 @@ export default function ForgotPasswordPage() {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || 'Failed to process request');
+        throw new Error(result.error || 'Failed to reset password');
       }
 
-      setIsEmailSent(true);
+      setIsSuccess(true);
       toast({
         title: 'Success',
-        description: 'If an account exists with this email, you will receive password reset instructions.',
+        description: 'Your password has been reset successfully.',
       });
+
+      // Redirect to login after 3 seconds
+      setTimeout(() => {
+        router.push('/auth/login');
+      }, 3000);
     } catch (error: any) {
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: error.message || 'Failed to process request',
+        description: error.message || 'Failed to reset password',
       });
     } finally {
       setIsLoading(false);
     }
   };
+
+  if (!token) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-black_main">
+        <div className="rounded-lg bg-dark_grey p-6 text-center">
+          <h3 className="mb-2 text-xl font-semibold text-white">Invalid Reset Link</h3>
+          <p className="text-light_grey">This password reset link is invalid or has expired.</p>
+          <Button
+            variant="outline"
+            className="mt-4"
+            onClick={() => router.push('/auth/forgot-password')}
+          >
+            Request new reset link
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-black_main">
@@ -97,37 +139,43 @@ export default function ForgotPasswordPage() {
           className="w-full max-w-md space-y-8"
         >
           <div className="space-y-2">
-            <Link
-              href="/auth/login"
-              className="inline-flex items-center text-sm text-light_grey hover:text-white transition-colors mb-6"
-            >
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to login
-            </Link>
-            <h1 className="text-4xl font-bold tracking-tight text-white">
-              Reset your password
-            </h1>
-            <p className="text-light_grey">
-              Enter your email address and we'll send you instructions to reset your password.
-            </p>
+            <h1 className="text-4xl font-bold tracking-tight text-white">Reset your password</h1>
+            <p className="text-light_grey">Please enter your new password below.</p>
           </div>
 
-          {!isEmailSent ? (
+          {!isSuccess ? (
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 <FormField
                   control={form.control}
-                  name="email"
+                  name="password"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-white">Email</FormLabel>
+                      <FormLabel className="text-white">New Password</FormLabel>
                       <FormControl>
-                        <Input
+                        <PasswordInput
                           {...field}
-                          type="email"
-                          placeholder="john@example.com"
+                          placeholder="Enter your new password"
                           className="h-12 bg-dark_grey text-white placeholder:text-light_grey form-input"
                           autoFocus
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="confirmPassword"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-white">Confirm Password</FormLabel>
+                      <FormControl>
+                        <PasswordInput
+                          {...field}
+                          placeholder="Confirm your new password"
+                          className="h-12 bg-dark_grey text-white placeholder:text-light_grey form-input"
                         />
                       </FormControl>
                       <FormMessage />
@@ -142,7 +190,7 @@ export default function ForgotPasswordPage() {
                   className="w-full h-12 main-gradient hover:bg-white hover:main-gradient-text transition-all mt-4"
                   disabled={isLoading}
                 >
-                  {isLoading ? 'Sending...' : 'Send reset instructions'}
+                  {isLoading ? 'Resetting password...' : 'Reset password'}
                 </Button>
               </form>
             </Form>
@@ -168,21 +216,10 @@ export default function ForgotPasswordPage() {
                   />
                 </svg>
               </div>
-              <h3 className="mb-2 text-xl font-semibold text-white">Check your email</h3>
+              <h3 className="mb-2 text-xl font-semibold text-white">Password Reset Successful</h3>
               <p className="text-light_grey">
-                If an account exists with this email address, we've sent instructions to reset your
-                password.
+                Your password has been reset successfully. Redirecting to login...
               </p>
-              <Button
-                variant="outline"
-                className="mt-4"
-                onClick={() => {
-                  setIsEmailSent(false);
-                  form.reset();
-                }}
-              >
-                Try another email
-              </Button>
             </motion.div>
           )}
         </motion.div>
@@ -191,13 +228,10 @@ export default function ForgotPasswordPage() {
       {/* Right Side - Image */}
       <div className="relative hidden w-1/2 lg:block">
         <div className="absolute inset-0 bg-gradient-to-r from-black_main to-transparent z-10" />
-        <Image
+        <img
           src="/auth-bg.jpg"
           alt="Authentication background"
           className="h-full w-full object-cover"
-          width={1000}
-          height={1000}
-          priority
         />
       </div>
     </div>

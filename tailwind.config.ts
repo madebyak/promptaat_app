@@ -17,6 +17,9 @@ const config: Config = {
       },
     },
     extend: {
+      backdropBlur: {
+        xs: '2px',
+      },
       fontFamily: {
         sans: ['var(--font-inter)', 'var(--font-ibm-plex-sans-arabic)'],
       },

@@ -72,6 +72,8 @@ model User {
   memberships            ProMembership[]
   catalogs               UserCatalog[]
   emailLogs             EmailLog[]
+  loginAttempts         LoginAttempt[]
+  passwordResetRequests PasswordResetRequest[]
 
   @@index([email, emailVerified], name: "users_email_verified_idx")
   @@map("users")
@@ -153,6 +155,32 @@ model SavedPrompt {
 
   @@id([catalogId, promptId])
   @@map("saved_prompts")
+}
+
+model LoginAttempt {
+  id         Int      @id @default(autoincrement())
+  identifier String   // Email or username
+  success    Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  userId     Int?     @map("user_id")
+  user       User?    @relation(fields: [userId], references: [id])
+
+  @@index([identifier, createdAt])
+  @@index([userId])
+}
+
+model PasswordResetRequest {
+  id        Int      @id @default(autoincrement())
+  email     String
+  token     String   @unique
+  used      Boolean  @default(false)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  userId    Int?     @map("user_id")
+  user      User?    @relation(fields: [userId], references: [id])
+
+  @@index([email, createdAt])
+  @@index([userId])
 }
 
 model EmailLog {

@@ -46,7 +46,7 @@ export default function Home() {
           <div className="relative h-[250px] sm:h-[300px] md:h-[350px] lg:h-[400px] overflow-hidden rounded-[var(--radius-2xl)]">
             <div className="absolute inset-0 w-full h-full transform translate-y-0 transition-transform duration-[8000ms] hover:translate-y-[-10%]">
               <img
-                src="/Banner_img_01.png"
+                src="/Banner_img_01.jpg"
                 alt="Banner landscape"
                 className="w-full h-[120%] object-cover"
               />

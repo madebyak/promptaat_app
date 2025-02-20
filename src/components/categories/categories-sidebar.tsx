@@ -55,57 +55,39 @@ export function CategoriesSidebar() {
 
   return (
     <>
-      {/* Mobile Categories Bar - Fixed below navbar */}
-      <div className="fixed top-16 left-0 right-0 h-12 bg-[#0A0A0A] border-b border-[#1F1F1F] z-40 lg:hidden">
-        <div className="flex items-center h-full px-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-white hover:bg-zinc-800 flex items-center gap-2"
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          >
-            <Menu className="h-4 w-4" />
+      {/* Mobile Menu Button */}
+      <div className="lg:hidden fixed top-16 left-0 right-0 z-40 bg-background/75 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60 border-b border-border p-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="w-full flex items-center justify-between"
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+        >
+          <div className="flex items-center gap-2">
+            <Menu className="h-5 w-5" />
             <span>{language === 'en' ? 'Categories' : 'الفئات'}</span>
-          </Button>
-        </div>
+          </div>
+          {isMobileMenuOpen ? (
+            <ChevronUp className="h-4 w-4" />
+          ) : (
+            <ChevronDown className="h-4 w-4" />
+          )}
+        </Button>
       </div>
 
-      {/* Mobile Menu Overlay */}
-      {isMobileMenuOpen && (
-        <div
-          className="fixed inset-0 bg-black/60 z-40 lg:hidden"
-          onClick={() => setIsMobileMenuOpen(false)}
-        />
-      )}
-
-      {/* Desktop Sidebar & Mobile Dropdown */}
-      <aside
-        className={cn(
-          // Desktop styles
-          'lg:fixed lg:inset-y-0 lg:left-0 lg:w-72 lg:bg-[#0A0A0A] lg:border-r lg:border-[#1F1F1F] lg:mt-16 lg:translate-x-0',
-          // Mobile styles
-          'fixed top-28 left-4 right-4 bg-[#0A0A0A] border border-[#1F1F1F] rounded-lg shadow-lg z-50 lg:rounded-none lg:shadow-none',
-          'transition-all duration-200 ease-in-out',
-          isMobileMenuOpen ? 'translate-y-0 opacity-100' : '-translate-y-2 opacity-0 pointer-events-none lg:opacity-100 lg:pointer-events-auto lg:translate-y-0'
-        )}
-      >
-        {/* Mobile Header */}
-        <div className="lg:hidden flex items-center justify-between p-4 border-b border-[#1F1F1F]">
-          <h2 className="text-lg font-semibold text-white">
-            {language === 'en' ? 'Categories' : 'الفئات'}
-          </h2>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setIsMobileMenuOpen(false)}
-            className="text-white hover:bg-zinc-800"
-          >
-            <ChevronUp className="h-5 w-5" />
-          </Button>
-        </div>
-
+      {/* Categories List */}
+      <div className={cn(
+        "lg:block",
+        "lg:w-72 lg:border-r lg:border-border lg:bg-background",
+        "fixed top-[88px] lg:top-16 left-0 w-full z-30",
+        "lg:h-[calc(100vh-4rem)] h-[calc(100vh-88px)]",
+        "transition-transform duration-300 ease-in-out",
+        isMobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
+        "lg:bg-transparent",
+        "bg-background/75 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60 lg:backdrop-blur-none"
+      )}>
         {/* Search Input */}
-        <div className="p-4 border-b border-[#1F1F1F]">
+        <div className="p-4 border-b border-border">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 h-4 w-4" />
             <Input
@@ -188,7 +170,7 @@ export function CategoriesSidebar() {
             )}
           </div>
         </ScrollArea>
-      </aside>
+      </div>
     </>
   );
 }

@@ -10,8 +10,14 @@ export function Navbar() {
   const { data: session, status } = useSession();
 
   return (
-    <nav className="fixed top-0 w-full z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
-      <div className="container flex h-16 items-center justify-between">
+    <nav 
+      style={{ 
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)'
+      }} 
+      className="fixed top-0 w-full z-50 bg-black/25"
+    >
+      <div className="container flex h-16 items-center justify-between border-b border-white/[0.08]">
         <Link href="/" className="flex items-center gap-2">
           <Image
             src="/logo.svg"

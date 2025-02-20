@@ -7,6 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { PasswordInput } from '@/components/ui/password-input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
@@ -22,17 +23,20 @@ import {
 import { signIn } from 'next-auth/react';
 import { useToast } from '@/components/ui/use-toast';
 import { GradientButton } from '@/components/ui/gradient-button';
+import { ReCAPTCHA } from '@/components/recaptcha';
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   rememberMe: z.boolean().default(false),
+  recaptchaToken: z.string().optional(),
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
+  const [recaptchaToken, setRecaptchaToken] = useState<string>();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -46,12 +50,22 @@ export default function LoginPage() {
   });
 
   const onSubmit = async (data: LoginFormValues) => {
+    if (!recaptchaToken) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Please complete the reCAPTCHA verification',
+      });
+      return;
+    }
+
     setIsLoading(true);
     try {
       const result = await signIn('credentials', {
-        email: data.email.toLowerCase(), // Ensure email is lowercase
+        email: data.email.toLowerCase(),
         password: data.password,
-        isAdmin: 'false', // Explicitly set isAdmin to false for user login
+        isAdmin: 'false',
+        recaptchaToken,
         redirect: false,
         callbackUrl: '/',
       });
@@ -119,6 +133,8 @@ export default function LoginPage() {
                         {...field}
                         type="email"
                         placeholder="john@example.com"
+                        className="h-12 bg-dark_grey text-white placeholder:text-light_grey form-input"
+                        autoFocus
                       />
                     </FormControl>
                     <FormMessage />
@@ -133,10 +149,10 @@ export default function LoginPage() {
                   <FormItem>
                     <FormLabel className="text-white">Password</FormLabel>
                     <FormControl>
-                      <Input
+                      <PasswordInput
                         {...field}
-                        type="password"
-                        placeholder="••••••••"
+                        placeholder="Enter your password"
+                        className="h-12 bg-dark_grey text-white placeholder:text-light_grey form-input"
                       />
                     </FormControl>
                     <FormMessage />
@@ -188,6 +204,8 @@ export default function LoginPage() {
                   )}
                 </GradientButton>
               </div>
+
+              <ReCAPTCHA onVerify={token => setRecaptchaToken(token)} />
 
               <p className="text-center text-sm text-light_grey mt-4">
                 Don't have an account?{' '}

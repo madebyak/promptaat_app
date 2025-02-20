@@ -8,6 +8,7 @@ import { Toaster } from '@/components/ui/sonner';
 import { Navbar } from '@/components/navbar';
 import { AuthProvider } from '@/components/auth-provider';
 import { PortalProvider } from '@/components/portal-provider';
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -30,12 +31,13 @@ export default function RootLayout({
             disableTransitionOnChange
           >
             <PortalProvider />
-            <div className="relative min-h-screen bg-black isolate">
+            <div className="relative min-h-screen bg-black">
               {!isAdminRoute && <Navbar />}
               <div className={!isAdminRoute ? 'pt-16' : undefined}>
                 {children}
               </div>
             </div>
+            <SpeedInsights />
             <Toaster />
           </ThemeProvider>
         </AuthProvider>

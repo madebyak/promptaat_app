@@ -57,6 +57,11 @@ const getEmailWrapper = (content: string) => `
       text-align: center;
     }
     
+    .logo img {
+      height: 40px;
+      width: auto;
+    }
+    
     h1 {
       font-size: 24px;
       font-weight: 600;
@@ -74,11 +79,12 @@ const getEmailWrapper = (content: string) => `
       display: inline-block;
       padding: 12px 24px;
       background: #6366f1;
-      color: white;
+      color: white !important;
       text-decoration: none;
       border-radius: 6px;
       font-weight: 600;
       margin: 16px 0;
+      text-align: center;
     }
     
     .otp {
@@ -96,6 +102,20 @@ const getEmailWrapper = (content: string) => `
       font-size: 14px;
       color: #71717a;
       margin-top: 32px;
+      padding-top: 32px;
+      border-top: 1px solid #e4e4e7;
+    }
+
+    .footer a {
+      color: #6366f1;
+      text-decoration: none;
+    }
+
+    .disclaimer {
+      font-size: 12px;
+      color: #a1a1aa;
+      margin-top: 16px;
+      text-align: center;
     }
     
     @media (prefers-color-scheme: dark) {
@@ -109,7 +129,7 @@ const getEmailWrapper = (content: string) => `
       }
       
       .footer {
-        color: #a1a1aa;
+        border-top-color: #3f3f46;
       }
     }
   </style>
@@ -118,11 +138,17 @@ const getEmailWrapper = (content: string) => `
   <div class="container">
     <div class="card">
       <div class="logo">
-        <img src="https://promptaat.com/logo.png" alt="Promptaat" height="40">
+        <img src="${process.env.NEXT_PUBLIC_APP_URL}/Promptaat_logo_${process.env.NODE_ENV === 'development' ? 'white' : 'black'}.svg" alt="Promptaat" />
       </div>
       ${content}
       <div class="footer">
-        <p> ${new Date().getFullYear()} Promptaat. All rights reserved.</p>
+        <p>Need help? Contact us at <a href="mailto:support@promptaat.com">support@promptaat.com</a></p>
+        <p>Visit our website: <a href="https://www.promptaat.com">www.promptaat.com</a></p>
+      </div>
+      <div class="disclaimer">
+        This email was sent by Promptaat. Please do not reply to this email.
+        The information contained in this email is confidential and may be legally privileged.
+        If you are not the intended recipient, please delete this email and notify us immediately.
       </div>
     </div>
   </div>
