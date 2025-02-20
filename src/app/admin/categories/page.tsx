@@ -41,271 +41,275 @@ function CategoriesContent() {
   const [totalItems, setTotalItems] = useState(0);
 
   useEffect(() => {
-    if (status === 'unauthenticated') {
-      router.push('/admin/login');
-    }
-  }, [status, router]);
+    console.log('Categories - Session:', session); // Debug log
+    console.log('Categories - Status:', status); // Debug log
 
-  if (status === 'loading') {
+    if (status === 'unauthenticated') {
+      console.log('Categories - Not authenticated, redirecting to login'); // Debug log
+      router.replace('/admin/login');
+      return;
+    }
+
+    if (status === 'authenticated' && session?.user?.role !== 'admin') {
+      console.log('Categories - Not admin, redirecting to home'); // Debug log
+      router.replace('/');
+      return;
+    }
+  }, [status, session, router]);
+
+  // Show loading state while checking session
+  if (status === 'loading' || !session) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin" />
+      <div className="flex items-center justify-center min-h-screen bg-[#151521]">
+        <Loader2 className="h-8 w-8 animate-spin text-white" />
       </div>
     );
   }
 
-  if (!session?.user?.isAdmin) {
-    return null;
-  }
+  // Show categories only if authenticated as admin
+  if (session?.user?.role === 'admin') {
+    // Transform categories for parent selection
+    const parentCategoryOptions = categories
+      .filter(cat => !cat.parent_category_id) // Only top-level categories
+      .map(cat => ({
+        label: cat.name_en,
+        value: cat.id.toString()
+      }));
 
-  // Transform categories for parent selection
-  const parentCategoryOptions = categories
-    .filter(cat => !cat.parent_category_id) // Only top-level categories
-    .map(cat => ({
-      label: cat.name_en,
-      value: cat.id.toString()
-    }));
-
-  // Fetch categories
-  const fetchCategories = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      const response = await fetch(
-        `/api/admin/categories?page=${currentPage}&pageSize=${pageSize}&search=${searchQuery}`
-      );
-      const data = await response.json();
-      
-      if (data.success) {
-        setCategories(data.data.categories);
-        setTotalItems(data.data.total);
-      } else {
+    // Fetch categories
+    const fetchCategories = useCallback(async () => {
+      try {
+        setIsLoading(true);
+        const response = await fetch(
+          `/api/admin/categories?page=${currentPage}&pageSize=${pageSize}&search=${searchQuery}`
+        );
+        const data = await response.json();
+        
+        if (data.success) {
+          setCategories(data.data.categories);
+          setTotalItems(data.data.total);
+        } else {
+          toast.error('Failed to fetch categories');
+        }
+      } catch (error) {
+        console.error('Error fetching categories:', error);
         toast.error('Failed to fetch categories');
+      } finally {
+        setIsLoading(false);
       }
-    } catch (error) {
-      console.error('Error fetching categories:', error);
-      toast.error('Failed to fetch categories');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [currentPage, pageSize, searchQuery]);
+    }, [currentPage, pageSize, searchQuery]);
 
-  // Fetch categories on mount and when pagination/search changes
-  useEffect(() => {
-    fetchCategories();
-  }, [fetchCategories]);
-
-  // Handle category creation
-  const handleCreateCategory = async (data: CreateCategoryInput) => {
-    try {
-      const response = await fetch('/api/admin/categories', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        toast.success('Category created successfully');
-        setIsAddModalOpen(false);
-        fetchCategories();
-      } else {
-        toast.error(result.error || 'Failed to create category');
-      }
-    } catch (error) {
-      console.error('Error creating category:', error);
-      toast.error('Failed to create category');
-    }
-  };
-
-  // Handle category update
-  const handleUpdateCategory = async (id: number, data: Partial<Category>) => {
-    try {
-      const response = await fetch(`/api/admin/categories/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        toast.success('Category updated successfully');
-        setSelectedCategory(null);
-        fetchCategories();
-      } else {
-        toast.error(result.error || 'Failed to update category');
-      }
-    } catch (error) {
-      console.error('Error updating category:', error);
-      toast.error('Failed to update category');
-    }
-  };
-
-  // Handle category deletion
-  const handleDeleteCategory = async (id: number) => {
-    try {
-      const response = await fetch(`/api/admin/categories/${id}`, {
-        method: 'DELETE',
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        toast.success('Category deleted successfully');
-        fetchCategories();
-      } else {
-        toast.error(result.error || 'Failed to delete category');
-      }
-    } catch (error) {
-      console.error('Error deleting category:', error);
-      toast.error('Failed to delete category');
-    }
-  };
-
-  // Handle order change
-  const handleOrderChange = async (updates: Array<{ id: number; order: number }>) => {
-    try {
-      const response = await fetch(`/api/admin/categories/order`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(updates),
-      });
-
-      const result = await response.json();
-
-      if (!result.success) {
-        toast.error(result.error || 'Failed to update order');
-        fetchCategories();
-      }
-    } catch (error) {
-      console.error('Error updating order:', error);
-      toast.error('Failed to update order');
+    // Fetch categories on mount and when pagination/search changes
+    useEffect(() => {
       fetchCategories();
-    }
-  };
+    }, [fetchCategories]);
 
-  // Handle page change
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-  };
+    // Handle category creation
+    const handleCreateCategory = async (data: CreateCategoryInput) => {
+      try {
+        const response = await fetch('/api/admin/categories', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data),
+        });
 
-  // Handle page size change
-  const handlePageSizeChange = (size: number) => {
-    setPageSize(size);
-    setCurrentPage(1); // Reset to first page when changing page size
-  };
+        const result = await response.json();
 
-  // Debounced search handler
-  const debouncedSearch = debounce((query: string) => {
-    setSearchQuery(query);
-    setCurrentPage(1); // Reset to first page when searching
-  }, 300);
+        if (result.success) {
+          toast.success('Category created successfully');
+          setIsAddModalOpen(false);
+          fetchCategories();
+        } else {
+          toast.error(result.error || 'Failed to create category');
+        }
+      } catch (error) {
+        console.error('Error creating category:', error);
+        toast.error('Failed to create category');
+      }
+    };
 
-  return (
-    <div className="container mx-auto py-8">
-      <h1 className="text-3xl font-bold mb-8">Categories</h1>
-      
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-semibold">Categories</h1>
-        <Button onClick={() => setIsAddModalOpen(true)} className="bg-green-500 hover:bg-green-600">
-          <Plus className="w-4 h-4 mr-2" />
-          Add New
-        </Button>
-      </div>
+    // Handle category update
+    const handleUpdateCategory = async (data: CreateCategoryInput) => {
+      if (!selectedCategory) return;
 
-      <div className="flex justify-between items-center mb-6">
-        <div className="relative w-72">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-          <Input
-            placeholder="Search categories..."
-            className="pl-10"
-            onChange={(e) => debouncedSearch(e.target.value)}
-          />
+      try {
+        const response = await fetch(`/api/admin/categories/${selectedCategory.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data),
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          toast.success('Category updated successfully');
+          setSelectedCategory(null);
+          fetchCategories();
+        } else {
+          toast.error(result.error || 'Failed to update category');
+        }
+      } catch (error) {
+        console.error('Error updating category:', error);
+        toast.error('Failed to update category');
+      }
+    };
+
+    // Handle category deletion
+    const handleDeleteCategory = async (id: number) => {
+      try {
+        const response = await fetch(`/api/admin/categories/${id}`, {
+          method: 'DELETE',
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          toast.success('Category deleted successfully');
+          fetchCategories();
+        } else {
+          toast.error(result.error || 'Failed to delete category');
+        }
+      } catch (error) {
+        console.error('Error deleting category:', error);
+        toast.error('Failed to delete category');
+      }
+    };
+
+    // Handle order update
+    const handleOrderUpdate = async (updates: Array<{ id: number; order: number }>) => {
+      try {
+        const response = await fetch('/api/admin/categories/order', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ updates }),
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          toast.success('Category order updated successfully');
+          fetchCategories();
+        } else {
+          toast.error(result.error || 'Failed to update category order');
+        }
+      } catch (error) {
+        console.error('Error updating category order:', error);
+        toast.error('Failed to update category order');
+      }
+    };
+
+    // Handle search input change
+    const handleSearchChange = debounce((value: string) => {
+      setSearchQuery(value);
+      setCurrentPage(1); // Reset to first page when searching
+    }, 300);
+
+    return (
+      <div className="p-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-semibold text-white">Categories</h1>
+          <Button
+            onClick={() => setIsAddModalOpen(true)}
+            className="bg-white text-black hover:bg-zinc-200"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Category
+          </Button>
         </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="ml-2">
-              Sort by
-              <ChevronDown className="ml-2 h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem>Name (A-Z)</DropdownMenuItem>
-            <DropdownMenuItem>Name (Z-A)</DropdownMenuItem>
-            <DropdownMenuItem>Latest</DropdownMenuItem>
-            <DropdownMenuItem>Oldest</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
 
-      {isLoading ? (
-        <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+        <div className="flex items-center space-x-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Input
+              placeholder="Search categories..."
+              className="pl-10 bg-[#151521] border-[#2D2D3B] text-white"
+              onChange={(e) => handleSearchChange(e.target.value)}
+            />
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="bg-[#151521] border-[#2D2D3B] text-white">
+                {pageSize} per page <ChevronDown className="ml-2 h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="bg-[#1C1C28] border-[#2D2D3B]">
+              {[10, 20, 30, 40, 50].map((size) => (
+                <DropdownMenuItem
+                  key={size}
+                  className="text-white hover:bg-[#2D2D3B]"
+                  onClick={() => {
+                    setPageSize(size);
+                    setCurrentPage(1);
+                  }}
+                >
+                  {size} per page
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
-      ) : (
-        <>
+
+        <div className="bg-[#1C1C28] rounded-lg border border-[#2D2D3B] overflow-hidden">
           <CategoryTable
             categories={categories}
             onEdit={setSelectedCategory}
             onDelete={handleDeleteCategory}
-            onOrderChange={handleOrderChange}
+            onOrderChange={handleOrderUpdate}
           />
+        </div>
 
+        <div className="flex justify-center mt-4">
           <Pagination
             currentPage={currentPage}
-            totalPages={Math.ceil(totalItems / pageSize)}
             pageSize={pageSize}
             totalItems={totalItems}
-            onPageChange={handlePageChange}
-            onPageSizeChange={handlePageSizeChange}
+            onPageChange={setCurrentPage}
           />
-        </>
-      )}
+        </div>
 
-      <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add New Category</DialogTitle>
-          </DialogHeader>
-          <CategoryForm
-            onSubmit={handleCreateCategory}
-            onCancel={() => setIsAddModalOpen(false)}
-            parentCategories={parentCategoryOptions}
-          />
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={!!selectedCategory} onOpenChange={(open) => !open && setSelectedCategory(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit Category</DialogTitle>
-          </DialogHeader>
-          {selectedCategory && (
+        <Dialog open={isAddModalOpen || !!selectedCategory} onOpenChange={(open) => {
+          if (!open) {
+            setIsAddModalOpen(false);
+            setSelectedCategory(null);
+          }
+        }}>
+          <DialogContent className="bg-[#1C1C28] border-[#2D2D3B] text-white">
+            <DialogHeader>
+              <DialogTitle>
+                {selectedCategory ? 'Edit Category' : 'Add Category'}
+              </DialogTitle>
+            </DialogHeader>
             <CategoryForm
-              onSubmit={(data) => handleUpdateCategory(selectedCategory.id, data)}
-              onCancel={() => setSelectedCategory(null)}
-              initialData={selectedCategory}
-              parentCategories={parentCategoryOptions.filter(opt => opt.value !== selectedCategory.id.toString())}
+              initialData={selectedCategory || undefined}
+              parentCategories={parentCategoryOptions}
+              onSubmit={selectedCategory ? handleUpdateCategory : handleCreateCategory}
+              onCancel={() => {
+                setIsAddModalOpen(false);
+                setSelectedCategory(null);
+              }}
             />
-          )}
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
+          </DialogContent>
+        </Dialog>
+      </div>
+    );
+  }
+
+  // Redirect to login for any other case
+  router.replace('/admin/login');
+  return null;
 }
 
 export default function CategoriesPage() {
   return (
     <Suspense fallback={
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin" />
+      <div className="flex items-center justify-center min-h-screen bg-[#151521]">
+        <Loader2 className="h-8 w-8 animate-spin text-white" />
       </div>
     }>
       <CategoriesContent />

@@ -52,6 +52,12 @@ async function checkEmailLimit(userId: number): Promise<boolean> {
 
 async function sendEmail(options: EmailOptions, userId: number, type: string) {
   try {
+    if (!process.env.RESEND_API_KEY) {
+      console.error('RESEND_API_KEY is not set');
+      throw new Error('Email service is not configured');
+    }
+
+    // Log email details in development
     if (process.env.NODE_ENV === 'development') {
       console.log('\n📧 Development Mode - Email Details:');
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
@@ -61,11 +67,10 @@ async function sendEmail(options: EmailOptions, userId: number, type: string) {
       console.log('HTML Content:', options.html);
       console.log('Text Content:', options.text);
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
-      
-      await logEmail(userId, type, options.to, 'development_logged');
-      return true;
     }
 
+    // Always try to send the email, even in development
+    console.log('Attempting to send email via Resend...');
     const response = await resend.emails.send({
       from: FROM_EMAIL,
       ...options,
@@ -79,13 +84,14 @@ async function sendEmail(options: EmailOptions, userId: number, type: string) {
         type,
       });
       await logEmail(userId, type, options.to, 'failed');
-      return false;
+      throw new Error(`Failed to send email: ${response.error.message}`);
     }
 
     console.log('Email sent successfully:', {
       to: options.to,
       subject: options.subject,
       type,
+      id: response.id,
     });
 
     await logEmail(userId, type, options.to, 'sent');
@@ -93,7 +99,7 @@ async function sendEmail(options: EmailOptions, userId: number, type: string) {
   } catch (error) {
     console.error('Error sending email:', error);
     await logEmail(userId, type, options.to, 'failed');
-    return false;
+    throw error;
   }
 }
 

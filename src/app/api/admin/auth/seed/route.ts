@@ -4,32 +4,44 @@ import { prisma } from '@/lib/prisma';
 
 export async function GET() {
   try {
-    // Check if admin user already exists
-    const existingAdmin = await prisma.adminUser.findFirst({
-      where: { username: 'admin' },
-    });
+    const adminUsers = [
+      { username: 'ranya', password: 'Tothemoon24$' },
+      { username: 'ahmed', password: 'Tothemoon24$' },
+    ];
 
-    if (existingAdmin) {
-      return NextResponse.json({ message: 'Admin user already exists' });
+    const results = [];
+
+    for (const user of adminUsers) {
+      // Check if admin user already exists
+      const existingAdmin = await prisma.adminUser.findFirst({
+        where: { username: user.username },
+      });
+
+      if (existingAdmin) {
+        results.push({ username: user.username, status: 'already exists' });
+        continue;
+      }
+
+      // Create admin user
+      const hashedPassword = await bcrypt.hash(user.password, 10);
+      const admin = await prisma.adminUser.create({
+        data: {
+          username: user.username,
+          password: hashedPassword,
+        },
+      });
+
+      results.push({ username: admin.username, status: 'created successfully' });
     }
 
-    // Create admin user
-    const hashedPassword = await bcrypt.hash('admin123', 10);
-    const admin = await prisma.adminUser.create({
-      data: {
-        username: 'admin',
-        password: hashedPassword,
-      },
-    });
-
     return NextResponse.json({
-      message: 'Admin user created successfully',
-      username: admin.username,
+      message: 'Admin users setup completed',
+      results,
     });
   } catch (error) {
-    console.error('Error seeding admin user:', error);
+    console.error('Error seeding admin users:', error);
     return NextResponse.json(
-      { error: 'Failed to seed admin user' },
+      { error: 'Failed to seed admin users' },
       { status: 500 }
     );
   }

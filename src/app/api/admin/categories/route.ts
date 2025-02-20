@@ -26,20 +26,20 @@ export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     
-    // For development, temporarily skip auth check
-    // if (!session?.user) {
-    //   return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    // }
+    if (!session?.user || session.user.role !== 'admin') {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
 
     const { searchParams } = new URL(req.url);
     const page = parseInt(searchParams.get('page') || '1');
     const pageSize = parseInt(searchParams.get('pageSize') || '20');
     const search = searchParams.get('search') || '';
+    const includeAll = searchParams.get('includeAll') === 'true';
 
     const skip = (page - 1) * pageSize;
 
-    // Only get top-level categories (no parent)
-    const where = {
+    // Query conditions
+    const where = includeAll ? {} : {
       parentCategoryId: null,
       ...(search ? {
         OR: [
@@ -49,30 +49,36 @@ export async function GET(req: NextRequest) {
       } : {})
     };
 
+    // Include configuration
+    const include = {
+      subcategories: {
+        include: {
+          subcategories: true // Include nested subcategories
+        }
+      }
+    };
+
     const [categories, total] = await Promise.all([
       prisma.category.findMany({
         where,
-        skip,
-        take: pageSize,
+        skip: includeAll ? undefined : skip,
+        take: includeAll ? undefined : pageSize,
         orderBy: { order: 'asc' },
-        include: {
-          subcategories: {
-            include: {
-              subcategories: true // Include nested subcategories
-            }
-          }
-        }
+        include
       }),
       prisma.category.count({ where })
     ]);
 
+    // Transform categories
+    const transformedCategories = categories.map(transformCategory);
+
     return NextResponse.json({
       success: true,
       data: {
-        categories: categories.map(transformCategory),
+        categories: transformedCategories,
         total,
-        page,
-        pageSize
+        page: includeAll ? 1 : page,
+        pageSize: includeAll ? total : pageSize
       }
     });
   } catch (error) {
@@ -89,10 +95,9 @@ export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     
-    // For development, temporarily skip auth check
-    // if (!session?.user) {
-    //   return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    // }
+    if (!session?.user || session.user.role !== 'admin') {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
 
     const body = await req.json();
     const validatedData = categorySchema.parse(body);

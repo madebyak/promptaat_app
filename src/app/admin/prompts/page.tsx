@@ -48,32 +48,92 @@ export default function PromptsPage() {
     }
   }, [status, router]);
 
+  // Handle edit prompt
+  const handleEditPrompt = useCallback(async (prompt: Prompt) => {
+    try {
+      setIsLoading(true);
+      
+      // First set the basic prompt data we already have
+      setSelectedPrompt(prompt);
+      setIsAddModalOpen(true);
+      
+      // Then fetch the full details
+      const response = await fetch(`/api/admin/prompts/${prompt.id}`, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include', // Important for sending cookies
+      });
+      
+      console.log('Edit prompt response status:', response.status); // Debug log
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Error response:', errorData); // Debug log
+        throw new Error(errorData.error || 'Failed to fetch prompt details');
+      }
+      
+      const data = await response.json();
+      console.log('Fetched prompt details:', data); // Debug log
+      
+      if (data.success) {
+        setSelectedPrompt(data.data);
+      } else {
+        throw new Error(data.error || 'Failed to fetch prompt details');
+      }
+    } catch (error) {
+      console.error('Error fetching prompt details:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to fetch prompt details');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   // Fetch prompts
   const fetchPrompts = useCallback(async () => {
     try {
       setIsLoading(true);
-      const queryParams = new URLSearchParams({
+      
+      // Build query parameters
+      const params = new URLSearchParams({
         page: currentPage.toString(),
         pageSize: pageSize.toString(),
-        search: searchQuery,
-        ...(selectedType !== 'all' && { type: selectedType }),
-        ...(selectedCategories.length && {
-          categories: selectedCategories.join(','),
-        }),
-        ...(selectedTools.length && { tools: selectedTools.join(',') }),
       });
 
-      const response = await fetch(`/api/admin/prompts?${queryParams}`, {
+      // Only add non-empty parameters
+      if (searchQuery) {
+        params.set('search', searchQuery);
+      }
+      if (selectedType !== 'all') {
+        params.set('type', selectedType);
+      }
+      if (selectedCategories.length > 0) {
+        params.set('categories', selectedCategories.join(','));
+      }
+      if (selectedTools.length > 0) {
+        params.set('tools', selectedTools.join(','));
+      }
+
+      console.log('Fetching prompts with params:', params.toString()); // Debug log
+
+      const response = await fetch(`/api/admin/prompts?${params}`, {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include', // Important for sending cookies
       });
 
+      console.log('List prompts response status:', response.status); // Debug log
+
       if (!response.ok) {
-        throw new Error('Failed to fetch prompts');
+        const errorData = await response.json();
+        console.error('Error response:', errorData); // Debug log
+        throw new Error(errorData.error || 'Failed to fetch prompts');
       }
 
       const data = await response.json();
+      console.log('Fetched prompts response:', data); // Debug log
+
       if (!data.success) {
         throw new Error(data.error || 'Failed to fetch prompts');
       }
@@ -88,18 +148,17 @@ export default function PromptsPage() {
     }
   }, [currentPage, pageSize, searchQuery, selectedType, selectedCategories, selectedTools]);
 
+  // Call fetchPrompts on mount and when dependencies change
   useEffect(() => {
-    if (status === 'authenticated') {
-      fetchPrompts();
-    }
-  }, [fetchPrompts, status]);
+    fetchPrompts();
+  }, [fetchPrompts]);
 
   // Debounced search
   const debouncedSearch = useCallback(
     debounce((value: string) => {
       setSearchQuery(value);
-      setCurrentPage(1);
-    }, 300),
+      setCurrentPage(1); // Reset to first page on search
+    }, 500),
     []
   );
 
@@ -250,7 +309,7 @@ export default function PromptsPage() {
             selectedPrompts={selectedPrompts}
             onSelectPrompt={handleSelectPrompt}
             onSelectAll={handleSelectAll}
-            onEdit={setSelectedPrompt}
+            onEdit={handleEditPrompt}
             onDelete={handleDelete}
           />
           <Pagination
@@ -278,7 +337,7 @@ export default function PromptsPage() {
             </DialogTitle>
           </DialogHeader>
           <PromptForm
-            prompt={selectedPrompt || undefined}
+            initialData={selectedPrompt || undefined}
             onSuccess={handleFormSuccess}
             onCancel={() => {
               setIsAddModalOpen(false);

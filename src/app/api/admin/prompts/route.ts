@@ -101,13 +101,7 @@ export async function GET(req: NextRequest) {
       title_en: prompt.titleEn,
       title_ar: prompt.titleAr,
       type: prompt.type,
-      description_en: prompt.descriptionEn,
-      description_ar: prompt.descriptionAr,
-      instructions_en: prompt.instructionsEn,
-      instructions_ar: prompt.instructionsAr,
-      initial_uses_counter: prompt.usesCounter,
-      created_at: prompt.createdAt,
-      updated_at: prompt.updatedAt,
+      uses_counter: prompt.usesCounter,
       categories: prompt.categories.map((pc) => ({
         id: pc.category.id,
         name_en: pc.category.nameEn,
@@ -118,15 +112,17 @@ export async function GET(req: NextRequest) {
         name_en: pt.tool.nameEn,
         icon_url: pt.tool.iconUrl,
       })),
+      created_at: prompt.createdAt,
+      updated_at: prompt.updatedAt,
     }));
+
+    console.log('Transformed prompts:', JSON.stringify(transformedPrompts, null, 2)); // Debug log
 
     return NextResponse.json({
       success: true,
       data: {
         prompts: transformedPrompts,
         total,
-        page,
-        pageSize,
       },
     });
   } catch (error) {
@@ -169,14 +165,14 @@ export async function POST(req: NextRequest) {
 
     // Log the data we're about to send to Prisma
     console.log('Creating prompt with data:', {
-      titleEn: validatedData.title_en,
-      titleAr: validatedData.title_ar,
+      title_en: validatedData.title_en,
+      title_ar: validatedData.title_ar,
       type: validatedData.type,
-      descriptionEn: validatedData.description_en,
-      descriptionAr: validatedData.description_ar,
-      instructionsEn: validatedData.instructions_en,
-      instructionsAr: validatedData.instructions_ar,
-      usesCounter: validatedData.initial_uses_counter,
+      description_en: validatedData.description_en,
+      description_ar: validatedData.description_ar,
+      instructions_en: validatedData.instructions_en,
+      instructions_ar: validatedData.instructions_ar,
+      uses_counter: validatedData.initial_uses_counter,
       categories: validatedData.category_ids,
       tools: validatedData.tool_ids,
     });

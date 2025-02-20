@@ -1,97 +1,114 @@
 import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
+import { compare } from "bcryptjs";
 import { prisma } from "./prisma";
-import bcrypt from "bcryptjs";
 
 export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
       name: "Credentials",
       credentials: {
-        email: { label: "Email", type: "email" },
+        username: { label: "Username/Email", type: "text" },
         password: { label: "Password", type: "password" },
+        isAdmin: { label: "Is Admin", type: "text" },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          throw new Error("Please provide both email and password");
+        if (!credentials?.username || !credentials?.password) {
+          throw new Error("Please provide both username and password");
         }
 
-        // Try to find regular user first
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
-        });
+        const isAdmin = credentials.isAdmin === 'true';
+        console.log('Auth - Login attempt:', { isAdmin, username: credentials.username }); // Debug log
 
-        if (user) {
-          // Verify regular user password
-          const isValid = await bcrypt.compare(credentials.password, user.password);
+        if (isAdmin) {
+          // Admin login
+          const admin = await prisma.adminUser.findUnique({
+            where: { username: credentials.username },
+          });
 
-          if (!isValid) {
+          if (!admin) {
+            console.log('Auth - Admin not found'); // Debug log
             throw new Error("Invalid credentials");
           }
 
+          const isValid = await compare(credentials.password, admin.password);
+
+          if (!isValid) {
+            console.log('Auth - Admin password invalid'); // Debug log
+            throw new Error("Invalid credentials");
+          }
+
+          console.log('Auth - Admin login successful'); // Debug log
+          return {
+            id: admin.id.toString(),
+            name: admin.username,
+            email: admin.username,
+            role: "admin",
+          };
+        } else {
+          // Regular user login
+          const user = await prisma.user.findUnique({
+            where: { email: credentials.username },
+          });
+
+          if (!user) {
+            console.log('Auth - User not found'); // Debug log
+            throw new Error("Invalid credentials");
+          }
+
+          const isValid = await compare(credentials.password, user.password);
+
+          if (!isValid) {
+            console.log('Auth - User password invalid'); // Debug log
+            throw new Error("Invalid credentials");
+          }
+
+          console.log('Auth - User login successful'); // Debug log
           return {
             id: user.id.toString(),
+            name: `${user.firstName} ${user.lastName}`,
             email: user.email,
-            firstName: user.firstName,
-            lastName: user.lastName,
+            image: user.image,
             role: "user",
           };
         }
-
-        // If no regular user found, try admin
-        const admin = await prisma.adminUser.findUnique({
-          where: { username: credentials.email },
-        });
-
-        if (admin) {
-          // Verify admin password
-          const isValid = await bcrypt.compare(credentials.password, admin.password);
-
-          if (!isValid) {
-            throw new Error("Invalid credentials");
-          }
-
-          return {
-            id: admin.id.toString(),
-            email: admin.username,
-            name: admin.username,
-            role: "admin",
-          };
-        }
-
-        throw new Error("Invalid credentials");
       },
     }),
   ],
+  pages: {
+    signIn: (request) => {
+      const isAdmin = request?.query?.isAdmin === 'true';
+      return isAdmin ? '/admin/login' : '/auth/login';
+    },
+    error: '/auth/error',
+  },
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.role = user.role;
+        console.log('Auth - JWT callback:', { user }); // Debug log
         token.id = user.id;
-        if (user.role === "user") {
-          token.firstName = user.firstName;
-          token.lastName = user.lastName;
-        }
+        token.role = user.role;
+        token.name = user.name;
+        token.email = user.email;
+        if (user.image) token.picture = user.image;
       }
       return token;
     },
     async session({ session, token }) {
-      if (token) {
-        session.user.id = token.id;
-        session.user.role = token.role;
-        if (token.role === "user") {
-          session.user.firstName = token.firstName;
-          session.user.lastName = token.lastName;
-        }
+      if (token && session.user) {
+        console.log('Auth - Session callback:', { token }); // Debug log
+        session.user.id = token.id as string;
+        session.user.role = token.role as string;
+        session.user.name = token.name as string;
+        session.user.email = token.email as string;
+        if (token.picture) session.user.image = token.picture as string;
       }
       return session;
     },
   },
-  pages: {
-    signIn: "/auth/login",
-  },
   session: {
     strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 days
   },
-  secret: process.env.NEXTAUTH_SECRET,
+  debug: process.env.NODE_ENV === 'development',
 };

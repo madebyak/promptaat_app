@@ -1,5 +1,7 @@
-import type { Metadata } from 'next';
+'use client';
+
 import { Inter } from 'next/font/google';
+import { usePathname } from 'next/navigation';
 import './globals.css';
 import { ThemeProvider } from '@/components/theme-provider';
 import { Toaster } from '@/components/ui/sonner';
@@ -9,19 +11,17 @@ import { PortalProvider } from '@/components/portal-provider';
 
 const inter = Inter({ subsets: ['latin'] });
 
-export const metadata: Metadata = {
-  title: 'Promptaat',
-  description: 'Your AI Prompt Library',
-};
-
-const RootLayout = ({
+export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
-}) => {
+}) {
+  const pathname = usePathname();
+  const isAdminRoute = pathname?.startsWith('/admin');
+
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>
+      <body className={inter.className} suppressHydrationWarning>
         <AuthProvider>
           <ThemeProvider
             attribute="class"
@@ -31,8 +31,8 @@ const RootLayout = ({
           >
             <PortalProvider />
             <div className="relative min-h-screen bg-black isolate">
-              <Navbar />
-              <div className="pt-16">
+              {!isAdminRoute && <Navbar />}
+              <div className={!isAdminRoute ? 'pt-16' : undefined}>
                 {children}
               </div>
             </div>
@@ -43,5 +43,3 @@ const RootLayout = ({
     </html>
   );
 }
-
-export default RootLayout;

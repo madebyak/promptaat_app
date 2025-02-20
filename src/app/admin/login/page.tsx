@@ -17,13 +17,11 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 
 const loginSchema = z.object({
   username: z.string().min(1, 'Username is required'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
-  rememberMe: z.boolean().default(false),
 });
 
 type LoginForm = z.infer<typeof loginSchema>;
@@ -38,13 +36,15 @@ export default function LoginPage() {
     defaultValues: {
       username: '',
       password: '',
-      rememberMe: false,
     },
   });
 
   const onSubmit = async (data: LoginForm) => {
     try {
       setIsLoading(true);
+      
+      console.log('Admin Login - Attempting login with:', { username: data.username }); // Debug log
+      
       const result = await signIn('credentials', {
         username: data.username,
         password: data.password,
@@ -53,15 +53,30 @@ export default function LoginPage() {
         callbackUrl: '/admin/dashboard',
       });
 
-      if (result?.error) {
+      console.log('Admin Login - Result:', result); // Debug log
+
+      if (!result) {
+        throw new Error('Authentication failed');
+      }
+
+      if (result.error) {
         throw new Error(result.error);
       }
 
-      if (result?.url) {
-        router.push(result.url);
-        router.refresh();
+      // Successful login
+      toast.success('Login successful');
+      
+      // Use replace instead of push to avoid history issues
+      if (result.url) {
+        console.log('Admin Login - Redirecting to:', result.url); // Debug log
+        router.replace(result.url);
+      } else {
+        console.log('Admin Login - Redirecting to dashboard'); // Debug log
+        router.replace('/admin/dashboard');
       }
+      
     } catch (error) {
+      console.error('Admin Login - Error:', error); // Debug log
       toast.error(error instanceof Error ? error.message : 'Invalid credentials');
     } finally {
       setIsLoading(false);
@@ -69,8 +84,8 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-black">
-      <div className="w-full max-w-md space-y-8 p-6">
+    <div className="flex min-h-screen items-center justify-center bg-[#151521]">
+      <div className="w-full max-w-md space-y-8 rounded-lg border border-zinc-800 bg-zinc-900/50 p-6 backdrop-blur">
         <div className="text-center">
           <h1 className="text-2xl font-semibold text-white">Admin Login</h1>
           <p className="mt-2 text-sm text-zinc-400">
@@ -90,6 +105,7 @@ export default function LoginPage() {
                     <Input
                       placeholder="Enter your username"
                       className="bg-zinc-900 border-zinc-800 text-white"
+                      disabled={isLoading}
                       {...field}
                     />
                   </FormControl>
@@ -104,58 +120,46 @@ export default function LoginPage() {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-white">Password</FormLabel>
-                  <FormControl>
-                    <div className="relative">
+                  <div className="relative">
+                    <FormControl>
                       <Input
                         type={showPassword ? 'text' : 'password'}
-                        placeholder="••••••••"
-                        className="bg-zinc-900 border-zinc-800 text-white"
+                        placeholder="Enter your password"
+                        className="bg-zinc-900 border-zinc-800 text-white pr-10"
+                        disabled={isLoading}
                         {...field}
                       />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white"
-                      >
-                        {showPassword ? (
-                          <EyeOff className="h-4 w-4" />
-                        ) : (
-                          <Eye className="h-4 w-4" />
-                        )}
-                      </button>
-                    </div>
-                  </FormControl>
+                    </FormControl>
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white"
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </button>
+                  </div>
                   <FormMessage className="text-red-400" />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="rememberMe"
-              render={({ field }) => (
-                <FormItem className="flex items-center space-x-2">
-                  <FormControl>
-                    <Checkbox
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                      className="border-zinc-800 data-[state=checked]:bg-zinc-700"
-                    />
-                  </FormControl>
-                  <FormLabel className="text-sm font-normal text-white">
-                    Remember me
-                  </FormLabel>
                 </FormItem>
               )}
             />
 
             <Button
               type="submit"
-              className="w-full bg-zinc-800 hover:bg-zinc-700 text-white"
+              className="w-full bg-white text-black hover:bg-zinc-200"
               disabled={isLoading}
             >
-              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Sign In
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Signing in...
+                </>
+              ) : (
+                'Sign in'
+              )}
             </Button>
           </form>
         </Form>

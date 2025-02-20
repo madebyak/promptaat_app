@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { Loader2 } from 'lucide-react';
@@ -48,10 +48,12 @@ interface Tool {
 
 interface PromptFormProps {
   initialData?: any;
+  onSuccess?: () => void;
 }
 
 export function PromptForm({
   initialData,
+  onSuccess,
 }: PromptFormProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
@@ -60,28 +62,59 @@ export function PromptForm({
   const [selectedCategories, setSelectedCategories] = useState<Category[]>([]);
   const [selectedTools, setSelectedTools] = useState<Tool[]>([]);
 
+  // Initialize form with initial data
   const form = useForm<PromptFormValues>({
     resolver: zodResolver(promptSchema),
     defaultValues: {
-      title_en: initialData?.title_en || "",
-      title_ar: initialData?.title_ar || "",
-      description_en: initialData?.description_en || "",
-      description_ar: initialData?.description_ar || "",
-      instructions_en: initialData?.instructions_en || "",
-      instructions_ar: initialData?.instructions_ar || "",
-      type: initialData?.type || "Free",
-      initial_uses_counter: initialData?.initial_uses_counter || 0,
-      category_ids: initialData?.category_ids || [],
-      tool_ids: initialData?.tool_ids || [],
+      title_en: "",
+      title_ar: "",
+      description_en: "",
+      description_ar: "",
+      instructions_en: "",
+      instructions_ar: "",
+      type: "Free",
+      initial_uses_counter: 0,
+      category_ids: [],
+      tool_ids: [],
     },
   });
 
+  // Reset form when initialData changes
+  useEffect(() => {
+    console.log('Initial Data received:', initialData); // Debug log
+
+    if (initialData) {
+      // Extract category and tool IDs from the initial data
+      const categoryIds = initialData.categories?.map((cat: any) => cat.id) || [];
+      const toolIds = initialData.tools?.map((tool: any) => tool.id) || [];
+
+      // Set selected categories and tools
+      setSelectedCategories(initialData.categories || []);
+      setSelectedTools(initialData.tools || []);
+
+      form.reset({
+        title_en: initialData.title_en,
+        title_ar: initialData.title_ar,
+        description_en: initialData.description_en,
+        description_ar: initialData.description_ar,
+        instructions_en: initialData.instructions_en,
+        instructions_ar: initialData.instructions_ar,
+        type: initialData.type,
+        initial_uses_counter: initialData.uses_counter,
+        category_ids: categoryIds,
+        tool_ids: toolIds,
+      });
+    }
+  }, [initialData, form]);
+
+  // Fetch categories and tools
   useEffect(() => {
     const fetchData = async () => {
       try {
+        setIsLoading(true);
         const [categoriesRes, toolsRes] = await Promise.all([
-          fetch('/api/admin/categories'),
-          fetch('/api/admin/tools'),
+          fetch('/api/admin/categories?pageSize=100'), // Get all categories
+          fetch('/api/admin/tools')
         ]);
 
         if (!categoriesRes.ok || !toolsRes.ok) {
@@ -91,229 +124,132 @@ export function PromptForm({
         const categoriesData = await categoriesRes.json();
         const toolsData = await toolsRes.json();
 
+        console.log('Fetched categories:', categoriesData); // Debug log
+        console.log('Fetched tools:', toolsData); // Debug log
+
         if (categoriesData.success) {
-          // Get the categories array from the correct path in the response
-          const mainCategories = categoriesData.data?.categories || [];
-          setCategories(mainCategories);
-
-          // If editing, set initial selected categories
-          if (initialData?.categories) {
-            const selectedCats = initialData.categories.map((cat: any) => ({
-              id: cat.id,
-              name_en: cat.name_en,
-              name_ar: cat.name_ar,
-              value: cat.id,
-              label: cat.name_en
-            }));
-            setSelectedCategories(selectedCats);
-          }
+          setCategories(categoriesData.data.categories || []);
         }
-
         if (toolsData.success) {
-          const tools = toolsData.data || [];
-          setTools(tools);
-
-          // If editing, set initial selected tools
-          if (initialData?.tools) {
-            const selectedTools = initialData.tools.map((tool: any) => ({
-              id: tool.id,
-              name_en: tool.name_en,
-              name_ar: tool.name_ar,
-              icon_url: tool.icon_url,
-              value: tool.id,
-              label: tool.name_en
-            }));
-            setSelectedTools(selectedTools);
-          }
+          setTools(toolsData.data || []);
         }
       } catch (error) {
-        console.error('Error fetching data:', error);
-        toast.error('Failed to fetch categories and tools');
+        console.error('Error fetching form data:', error);
+        toast.error('Failed to load form data');
+      } finally {
+        setIsLoading(false);
       }
     };
 
     fetchData();
-  }, [initialData]);
+  }, []);
 
-  // Update form values when selections change
-  useEffect(() => {
-    form.setValue('category_ids', selectedCategories.map(c => c.id));
-  }, [selectedCategories, form]);
+  // Transform categories for the select component
+  const categoryOptions = useMemo(() => {
+    const flattenCategories = (categories: Category[], prefix = '') => {
+      return categories.reduce<any[]>((acc, category) => {
+        // Add main category
+        acc.push({
+          value: category.id,
+          label: prefix + category.name_en,
+          data: category
+        });
 
-  useEffect(() => {
-    form.setValue('tool_ids', selectedTools.map(t => t.id));
-  }, [selectedTools, form]);
+        // Add subcategories if they exist
+        if (category.subcategories?.length) {
+          acc.push(...flattenCategories(category.subcategories, `${prefix}↳ `));
+        }
+
+        return acc;
+      }, []);
+    };
+
+    return flattenCategories(categories);
+  }, [categories]);
+
+  // Transform tools for the select component
+  const toolOptions = useMemo(() => {
+    return tools.map((tool) => ({
+      value: tool.id,
+      label: tool.name_en,
+      data: tool
+    }));
+  }, [tools]);
 
   const onSubmit = async (data: PromptFormValues) => {
     try {
       setIsLoading(true);
-      console.log('Form data being sent:', data);
-      
-      if (initialData) {
-        // Update prompt
-        const response = await fetch(`/api/admin/prompts/${initialData.id}`, {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(data),
-        });
+      console.log('Submitting form data:', data); // Debug log
 
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || "Failed to update prompt");
-        }
-      } else {
-        // Create prompt
-        const response = await fetch("/api/admin/prompts", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(data),
-        });
+      const endpoint = initialData 
+        ? `/api/admin/prompts/${initialData.id}`
+        : '/api/admin/prompts';
 
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || "Failed to create prompt");
-        }
+      const response = await fetch(endpoint, {
+        method: initialData ? 'PUT' : 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to save prompt');
       }
 
-      router.refresh();
-      router.push("/admin/prompts");
-      toast.success(initialData ? "Prompt updated!" : "Prompt created!");
-    } catch (error: any) {
-      console.error('Error submitting form:', error);
-      toast.error(error.message);
+      const result = await response.json();
+      
+      if (result.success) {
+        toast.success(initialData ? 'Prompt updated successfully' : 'Prompt created successfully');
+        if (onSuccess) {
+          onSuccess();
+        }
+      } else {
+        throw new Error(result.error || 'Failed to save prompt');
+      }
+    } catch (error) {
+      console.error('Error saving prompt:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to save prompt');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const customStyles = {
-    control: (base: any) => ({
-      ...base,
-      background: '#18181b',
-      borderColor: '#27272a',
-      '&:hover': {
-        borderColor: '#3f3f46'
-      }
-    }),
-    menu: (base: any) => ({
-      ...base,
-      background: '#18181b',
-      border: '1px solid #27272a'
-    }),
-    group: (base: any) => ({
-      ...base,
-      padding: 0,
-      '& > div:first-of-type': {
-        padding: '8px 12px',
-        color: 'white',
-        fontWeight: 600,
-        fontSize: '0.95rem',
-        backgroundColor: '#27272a',
-        marginBottom: 0
-      }
-    }),
-    groupHeading: (base: any) => ({
-      ...base,
-      marginBottom: 0,
-      cursor: 'default',
-      userSelect: 'none'
-    }),
-    option: (base: any, state: { isSelected: boolean; isFocused: boolean }) => ({
-      ...base,
-      backgroundColor: state.isSelected ? '#3f3f46' : state.isFocused ? '#27272a' : undefined,
-      color: 'white',
-      padding: '8px 12px',
-      cursor: 'pointer',
-      '&:active': {
-        backgroundColor: '#3f3f46'
-      }
-    }),
-    multiValue: (base: any) => ({
-      ...base,
-      backgroundColor: '#27272a'
-    }),
-    multiValueLabel: (base: any) => ({
-      ...base,
-      color: 'white'
-    }),
-    multiValueRemove: (base: any) => ({
-      ...base,
-      color: 'white',
-      '&:hover': {
-        backgroundColor: '#ef4444',
-        color: 'white'
-      }
-    }),
-    input: (base: any) => ({
-      ...base,
-      color: 'white'
-    }),
-    placeholder: (base: any) => ({
-      ...base,
-      color: '#71717a'
-    }),
-    singleValue: (base: any) => ({
-      ...base,
-      color: 'white'
-    })
-  };
-
-  // Transform categories into grouped options
-  const groupedCategories = categories.reduce((acc: any[], category: Category) => {
-    if (category.subcategories && category.subcategories.length > 0) {
-      acc.push({
-        label: category.name_en,
-        options: category.subcategories.map(sub => ({
-          id: sub.id,
-          name_en: `${sub.name_en}`,
-          name_ar: sub.name_ar,
-          value: sub.id,
-          label: sub.name_en
-        }))
-      });
-    }
-    return acc;
-  }, []);
-
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-        <div className="grid grid-cols-2 gap-8">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <div className="grid grid-cols-2 gap-4">
           <FormField
             control={form.control}
             name="title_en"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Title (English)</FormLabel>
+                <FormLabel className="text-white">Title (English)</FormLabel>
                 <FormControl>
                   <Input
-                    disabled={isLoading}
                     placeholder="Enter title in English"
+                    className="bg-[#151521] border-[#2D2D3B] text-white"
                     {...field}
-                    className="bg-zinc-900 border-zinc-800 text-white"
                   />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
+
           <FormField
             control={form.control}
             name="title_ar"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Title (Arabic)</FormLabel>
+                <FormLabel className="text-white">Title (Arabic)</FormLabel>
                 <FormControl>
                   <Input
-                    disabled={isLoading}
                     placeholder="Enter title in Arabic"
-                    {...field}
-                    className="bg-zinc-900 border-zinc-800 text-white text-right"
+                    className="bg-[#151521] border-[#2D2D3B] text-white text-right"
                     dir="rtl"
+                    {...field}
                   />
                 </FormControl>
                 <FormMessage />
@@ -322,92 +258,122 @@ export function PromptForm({
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-8">
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="description_en"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-white">Description (English)</FormLabel>
+                <FormControl>
+                  <Textarea
+                    placeholder="Enter description in English"
+                    className="bg-[#151521] border-[#2D2D3B] text-white min-h-[100px]"
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="description_ar"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-white">Description (Arabic)</FormLabel>
+                <FormControl>
+                  <Textarea
+                    placeholder="Enter description in Arabic"
+                    className="bg-[#151521] border-[#2D2D3B] text-white text-right min-h-[100px]"
+                    dir="rtl"
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="instructions_en"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-white">Instructions (English)</FormLabel>
+                <FormControl>
+                  <Textarea
+                    placeholder="Enter instructions in English"
+                    className="bg-[#151521] border-[#2D2D3B] text-white min-h-[100px]"
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="instructions_ar"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-white">Instructions (Arabic)</FormLabel>
+                <FormControl>
+                  <Textarea
+                    placeholder="Enter instructions in Arabic"
+                    className="bg-[#151521] border-[#2D2D3B] text-white text-right min-h-[100px]"
+                    dir="rtl"
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
           <FormField
             control={form.control}
             name="type"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Type</FormLabel>
+                <FormLabel className="text-white">Type</FormLabel>
                 <Select
-                  disabled={isLoading}
-                  onValueChange={field.onChange}
                   value={field.value}
-                  defaultValue={field.value}
+                  onValueChange={field.onChange}
                 >
                   <FormControl>
-                    <SelectTrigger>
-                      <SelectValue
-                        defaultValue={field.value}
-                        placeholder="Select a type"
-                      />
+                    <SelectTrigger className="bg-[#151521] border-[#2D2D3B] text-white">
+                      <SelectValue placeholder="Select type" />
                     </SelectTrigger>
                   </FormControl>
-                  <SelectContent>
-                    <SelectItem value="Free">Free</SelectItem>
-                    <SelectItem value="Pro">Pro</SelectItem>
+                  <SelectContent className="bg-[#1C1C28] border-[#2D2D3B]">
+                    <SelectItem value="Free" className="text-white hover:bg-[#2D2D3B]">Free</SelectItem>
+                    <SelectItem value="Premium" className="text-white hover:bg-[#2D2D3B]">Premium</SelectItem>
                   </SelectContent>
                 </Select>
                 <FormMessage />
               </FormItem>
             )}
           />
+
           <FormField
             control={form.control}
             name="initial_uses_counter"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Initial Uses Counter</FormLabel>
+                <FormLabel className="text-white">Initial Uses Counter</FormLabel>
                 <FormControl>
                   <Input
-                    disabled={isLoading}
-                    placeholder="0"
-                    {...field}
                     type="number"
-                    className="bg-zinc-900 border-zinc-800 text-white"
-                  />
-                </FormControl>
-                <FormDescription className="text-zinc-400">
-                  The number to start counting copies from (e.g., 300,000)
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-
-        <div className="grid grid-cols-2 gap-8">
-          <FormField
-            control={form.control}
-            name="description_en"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Description (English)</FormLabel>
-                <FormControl>
-                  <Textarea
-                    disabled={isLoading}
-                    placeholder="Enter description in English"
+                    className="bg-[#151521] border-[#2D2D3B] text-white"
                     {...field}
-                    className="bg-zinc-900 border-zinc-800 text-white resize-none"
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="description_ar"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Description (Arabic)</FormLabel>
-                <FormControl>
-                  <Textarea
-                    disabled={isLoading}
-                    placeholder="Enter description in Arabic"
-                    {...field}
-                    className="bg-zinc-900 border-zinc-800 text-white resize-none text-right"
-                    dir="rtl"
+                    onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
                   />
                 </FormControl>
                 <FormMessage />
@@ -416,70 +382,43 @@ export function PromptForm({
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-8">
-          <FormField
-            control={form.control}
-            name="instructions_en"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Instructions (English)</FormLabel>
-                <FormControl>
-                  <Textarea
-                    disabled={isLoading}
-                    placeholder="Enter instructions in English"
-                    {...field}
-                    className="bg-zinc-900 border-zinc-800 text-white resize-none"
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="instructions_ar"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Instructions (Arabic)</FormLabel>
-                <FormControl>
-                  <Textarea
-                    disabled={isLoading}
-                    placeholder="Enter instructions in Arabic"
-                    {...field}
-                    className="bg-zinc-900 border-zinc-800 text-white resize-none text-right"
-                    dir="rtl"
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-
-        <div className="grid grid-cols-2 gap-8">
+        <div className="grid grid-cols-2 gap-4">
           <FormField
             control={form.control}
             name="category_ids"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Categories</FormLabel>
+                <FormLabel className="text-white">Categories</FormLabel>
                 <FormControl>
                   <ReactSelect
                     isMulti
-                    isDisabled={isLoading}
-                    options={groupedCategories}
-                    value={selectedCategories}
-                    onChange={(selected) => setSelectedCategories(selected as Category[])}
-                    getOptionLabel={(option: Category) => option.name_en}
-                    getOptionValue={(option: Category) => option.id.toString()}
-                    placeholder="Select categories..."
-                    styles={customStyles}
-                    className="text-white"
-                    formatGroupLabel={(data) => (
-                      <div className="font-semibold text-white">
-                        {data.label}
-                      </div>
+                    options={categoryOptions}
+                    value={categoryOptions.filter(option => 
+                      field.value.includes(option.value)
                     )}
+                    onChange={(newValue) => {
+                      field.onChange(newValue ? newValue.map(item => item.value) : []);
+                    }}
+                    className="bg-[#151521] border-[#2D2D3B]"
+                    classNames={{
+                      control: (state) => 
+                        cn(
+                          "!bg-[#151521] !border-[#2D2D3B] !text-white hover:!border-[#2D2D3B]",
+                          state.isFocused && "!border-[#2D2D3B] !shadow-none"
+                        ),
+                      menu: () => "!bg-[#1C1C28] !border !border-[#2D2D3B]",
+                      option: (state) => 
+                        cn(
+                          "!text-white",
+                          state.isFocused && "!bg-[#2D2D3B]",
+                          state.isSelected && "!bg-[#2D2D3B]"
+                        ),
+                      multiValue: () => "!bg-[#2D2D3B] !text-white",
+                      multiValueLabel: () => "!text-white",
+                      multiValueRemove: () => "!text-white hover:!bg-[#3D3D4B]",
+                      placeholder: () => "!text-gray-400",
+                    }}
+                    isLoading={isLoading}
                   />
                 </FormControl>
                 <FormMessage />
@@ -492,19 +431,37 @@ export function PromptForm({
             name="tool_ids"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Tools</FormLabel>
+                <FormLabel className="text-white">Tools</FormLabel>
                 <FormControl>
                   <ReactSelect
                     isMulti
-                    isDisabled={isLoading}
-                    options={tools}
-                    value={selectedTools}
-                    onChange={(selected) => setSelectedTools(selected as Tool[])}
-                    getOptionLabel={(option: Tool) => option.name_en}
-                    getOptionValue={(option: Tool) => option.id.toString()}
-                    placeholder="Select tools..."
-                    styles={customStyles}
-                    className="text-white"
+                    options={toolOptions}
+                    value={toolOptions.filter(option => 
+                      field.value.includes(option.value)
+                    )}
+                    onChange={(newValue) => {
+                      field.onChange(newValue ? newValue.map(item => item.value) : []);
+                    }}
+                    className="bg-[#151521] border-[#2D2D3B]"
+                    classNames={{
+                      control: (state) => 
+                        cn(
+                          "!bg-[#151521] !border-[#2D2D3B] !text-white hover:!border-[#2D2D3B]",
+                          state.isFocused && "!border-[#2D2D3B] !shadow-none"
+                        ),
+                      menu: () => "!bg-[#1C1C28] !border !border-[#2D2D3B]",
+                      option: (state) => 
+                        cn(
+                          "!text-white",
+                          state.isFocused && "!bg-[#2D2D3B]",
+                          state.isSelected && "!bg-[#2D2D3B]"
+                        ),
+                      multiValue: () => "!bg-[#2D2D3B] !text-white",
+                      multiValueLabel: () => "!text-white",
+                      multiValueRemove: () => "!text-white hover:!bg-[#3D3D4B]",
+                      placeholder: () => "!text-gray-400",
+                    }}
+                    isLoading={isLoading}
                   />
                 </FormControl>
                 <FormMessage />
@@ -513,21 +470,14 @@ export function PromptForm({
           />
         </div>
 
-        <div className="flex justify-end space-x-2">
+        <div className="flex justify-end space-x-4">
           <Button
-            type="button"
-            onClick={() => router.push("/admin/prompts")}
-            className="bg-zinc-800 text-white hover:bg-zinc-700"
-          >
-            Cancel
-          </Button>
-          <Button
-            disabled={isLoading}
             type="submit"
+            disabled={isLoading}
             className="bg-white text-black hover:bg-zinc-200"
           >
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {initialData ? "Update Prompt" : "Create Prompt"}
+            {initialData ? 'Update' : 'Create'} Prompt
           </Button>
         </div>
       </form>

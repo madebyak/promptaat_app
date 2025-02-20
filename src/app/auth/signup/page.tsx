@@ -206,12 +206,13 @@ export default function SignupPage() {
 
   return (
     <div className="flex min-h-screen bg-black_main">
-      <div className="flex w-1/2 flex-col justify-center px-20">
+      {/* Form Section */}
+      <div className="flex w-full lg:w-1/2 flex-col justify-center px-6 lg:px-20">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="w-full max-w-md space-y-8"
+          className="mx-auto w-full max-w-md space-y-8"
         >
           <div className="space-y-2">
             <h1 className="text-4xl font-bold tracking-tight text-white">
@@ -402,7 +403,8 @@ export default function SignupPage() {
         </motion.div>
       </div>
 
-      <div className="relative w-1/2">
+      {/* Image Section - Only show on large screens */}
+      <div className="hidden lg:block relative w-1/2">
         <Image
           src="/desert_img_01.png"
           alt="Authentication background"
